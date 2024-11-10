@@ -288,11 +288,9 @@ fn display_package_details(package_name: &str) {
 }
 
 fn display_managed_packages(package_states: &HashMap<String, PackageState>) {
-    println!("{}", "Managed Packages:".bold().green());
     for (name, state) in package_states {
         if state.explicit {
-            let memo = state.memo.as_deref().unwrap_or("No memo provided.");
-            println!("{} - {}", name.bold(), memo);
+            println!("{}", name);
         }
     }
 }
@@ -304,11 +302,10 @@ fn display_unmanaged_packages(package_states: &HashMap<String, PackageState>) ->
         .expect("Failed to execute paru -Qe.");
     let output_str = String::from_utf8_lossy(&output.stdout);
 
-    println!("{}", "Unmanaged Packages:".bold().red());
     for line in output_str.lines() {
         let package_name = line.split_whitespace().next().unwrap().to_string();
         if !package_states.contains_key(&package_name) {
-            println!("{}", package_name.bold());
+            println!("{}", package_name);
         }
     }
 
