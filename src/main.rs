@@ -53,7 +53,7 @@ fn main() -> io::Result<()> {
 
     match &args.command {
         Some(Commands::Add { packages }) => {
-            add_command(&mut package_states, &state_file_path, packages)?;
+            add_command(&mut package_states, &state_file_path, packages)?
         }
         Some(Commands::Apply {
             with_install,
@@ -61,13 +61,13 @@ fn main() -> io::Result<()> {
             sync,
         }) => {
             if *sync || (*with_install && *with_uninstall) {
-                apply_changes(&package_states, true, true)?;
+                apply_command(&package_states, true, true)?;
             } else {
-                apply_changes(&package_states, *with_install, *with_uninstall)?;
+                apply_command(&package_states, *with_install, *with_uninstall)?;
             }
         }
-        Some(Commands::Managed) => display_managed_packages(&package_states),
-        Some(Commands::Unmanaged) => display_unmanaged_packages(&package_states)?,
+        Some(Commands::Managed) => managed_command(&package_states),
+        Some(Commands::Unmanaged) => unmanaged_command(&package_states)?,
         None => {
             println!("{}", Cli::command().render_long_help());
         }
@@ -282,7 +282,7 @@ fn display_package_details(package_name: &str) {
     println!("{}", qi_output_str);
 }
 
-fn display_managed_packages(package_states: &HashMap<String, PackageState>) {
+fn managed_command(package_states: &HashMap<String, PackageState>) {
     for (name, state) in package_states {
         if state.explicit {
             println!("{}", name);
@@ -290,7 +290,7 @@ fn display_managed_packages(package_states: &HashMap<String, PackageState>) {
     }
 }
 
-fn display_unmanaged_packages(package_states: &HashMap<String, PackageState>) -> io::Result<()> {
+fn unmanaged_command(package_states: &HashMap<String, PackageState>) -> io::Result<()> {
     let output = Command::new("paru")
         .arg("-Qe")
         .output()
@@ -307,7 +307,7 @@ fn display_unmanaged_packages(package_states: &HashMap<String, PackageState>) ->
     Ok(())
 }
 
-fn apply_changes(
+fn apply_command(
     package_states: &HashMap<String, PackageState>,
     with_install: bool,
     with_uninstall: bool,
