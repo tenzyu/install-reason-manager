@@ -53,11 +53,7 @@ fn main() -> io::Result<()> {
 
     match &args.command {
         Some(Commands::Add { packages }) => {
-            if packages.is_empty() {
-                interactive_mode(&mut package_states)?;
-            } else {
-                add_packages(&mut package_states, packages)?;
-            }
+            add_command(&mut package_states, &state_file_path, packages)?;
         }
         Some(Commands::Apply {
             with_install,
@@ -77,7 +73,6 @@ fn main() -> io::Result<()> {
         }
     }
 
-    save_package_states(&state_file_path, &package_states)?;
     Ok(())
 }
 
@@ -143,48 +138,56 @@ fn save_package_states(
     fs::write(file_path, data)
 }
 
-fn add_packages(
+fn add_command(
     package_states: &mut HashMap<String, PackageState>,
+    state_file_path: &PathBuf,
     packages: &[String],
 ) -> io::Result<()> {
-    let installed_packages = Command::new("paru")
-        .arg("-Q")
-        .output()
-        .expect("Failed to execute paru -Q.");
-    let installed_list: Vec<String> = String::from_utf8_lossy(&installed_packages.stdout)
-        .lines()
-        .map(|line| line.split_whitespace().next().unwrap().to_string())
-        .collect();
+    let mut _packages = Vec::<String>::new();
 
-    let mut missing_packages = vec![];
+    if packages.len() > 0 {
+        let installed_packages = Command::new("paru")
+            .arg("-Q")
+            .output()
+            .expect("Failed to execute paru -Q.");
+        let installed_list: Vec<String> = String::from_utf8_lossy(&installed_packages.stdout)
+            .lines()
+            .map(|line| line.split_whitespace().next().unwrap().to_string())
+            .collect();
 
-    for package in packages {
-        if installed_list.contains(package) {
-            handle_package_interactively(package_states, package)?;
-        } else {
-            missing_packages.push(package.clone());
+        let mut missing_packages = vec![];
+        for package in packages {
+            if !installed_list.contains(package) {
+                missing_packages.push(package.clone());
+            } else {
+                _packages.push(package.clone())
+            }
         }
-    }
+        if !missing_packages.is_empty() {
+            println!(
+                "Error: Some packages are not installed: {:?}",
+                missing_packages
+            );
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Some packages are not installed",
+            ));
+        }
+    } else {
+        let output = Command::new("paru")
+            .arg("-Qe")
+            .output()
+            .expect("Failed to execute paru -Qe.");
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        for line in output_str.lines() {
+            let package_name = line.split_whitespace().next().unwrap().to_string();
+            _packages.push(package_name);
+        }
+    };
 
-    if !missing_packages.is_empty() {
-        println!(
-            "Error: Some packages are not installed: {:?}",
-            missing_packages
-        );
-    }
+    let mut save_enabled = true;
 
-    Ok(())
-}
-
-fn interactive_mode(package_states: &mut HashMap<String, PackageState>) -> io::Result<()> {
-    let output = Command::new("paru")
-        .arg("-Qe")
-        .output()
-        .expect("Failed to execute paru -Qe.");
-    let output_str = String::from_utf8_lossy(&output.stdout);
-
-    for line in output_str.lines() {
-        let package_name = line.split_whitespace().next().unwrap().to_string();
+    'outer: for package_name in _packages {
         if let Some(state) = package_states.get(&package_name) {
             if state.explicit {
                 continue;
@@ -198,14 +201,18 @@ fn interactive_mode(package_states: &mut HashMap<String, PackageState>) -> io::R
                     .unwrap_or_default()
                     .to_lowercase();
                 if save == "y" || save == "n" {
-                    if save == "y" {
-                        break;
+                    if save == "n" {
+                        save_enabled = false;
                     }
+                    break 'outer;
                 } else {
                     println!("Invalid input. Please enter 'y' or 'n'.");
                 }
             }
         }
+    }
+    if save_enabled {
+        save_package_states(&state_file_path, &package_states)?;
     }
 
     Ok(())
@@ -216,10 +223,9 @@ fn handle_package_interactively(
     package_name: &str,
 ) -> io::Result<()> {
     println!("{}", format!("Package: {}", package_name).bold().cyan());
-    // TODO: もっと小さい情報を見せる
     display_package_details(package_name);
 
-    let options = vec!["Yes (y)", "No (n)", "Skip (s)", "Details (d)", "Quit (q)"];
+    let options = vec!["Yes", "No", "Skip", "Quit"];
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Did you explicitly install this package?")
         .items(&options)
@@ -253,10 +259,10 @@ fn handle_package_interactively(
             );
         }
         's' | 'S' => {}
-        'd' | 'D' => {
-            display_package_details(package_name);
-            handle_package_interactively(package_states, package_name)?;
-        }
+        // 'd' | 'D' => {
+        //     display_package_details(package_name);
+        //     handle_package_interactively(package_states, package_name)?;
+        // }
         'q' | 'Q' => return Err(io::Error::new(io::ErrorKind::Other, "Quit")),
         _ => {}
     }
@@ -272,19 +278,8 @@ fn display_package_details(package_name: &str) {
         .expect("Failed to execute paru -Qi.");
     let qi_output_str = String::from_utf8_lossy(&qi_output.stdout);
 
-    // TODO: pactree のOUTPUTをいい感じに使う
-    //
-    // let pactree_output = Command::new("pactree")
-    //     .arg("-u")
-    //     .arg(package_name)
-    //     .output()
-    //     .expect("Failed to execute pactree.");
-    // let pactree_output_str = String::from_utf8_lossy(&pactree_output.stdout);
-
     println!("{}", "\nPackage Details:".bold().yellow());
     println!("{}", qi_output_str);
-    // println!("{}", "\nDirect Dependencies Tree:".bold().yellow());
-    // println!("{}", pactree_output_str);
 }
 
 fn display_managed_packages(package_states: &HashMap<String, PackageState>) {
