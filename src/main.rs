@@ -318,35 +318,55 @@ fn apply_changes(
     with_uninstall: bool,
 ) -> io::Result<()> {
     let installed_packages = get_installed_packages()?;
-    if with_install {
-        for (package, state) in package_states {
-            if state.explicit && !installed_packages.contains(package) {
-                Command::new("paru")
-                    .arg("-S")
-                    .arg(package)
-                    .status()
-                    .expect("Failed to install package.");
-            }
-        }
-    }
-    if with_uninstall {
-        let output = Command::new("paru")
-            .arg("-Qe")
-            .output()
-            .expect("Failed to execute paru -Qe.");
-        let output_str = String::from_utf8_lossy(&output.stdout);
+    let mut to_install = Vec::new();
+    let mut to_install_asdeps = Vec::new();
 
-        for line in output_str.lines() {
-            let package_name = line.split_whitespace().next().unwrap();
-            if !package_states.contains_key(package_name) {
-                Command::new("paru")
-                    .arg("-R")
-                    .arg(package_name)
-                    .status()
-                    .expect("Failed to uninstall package.");
+    for (package, state) in package_states {
+        if state.explicit {
+            if with_install && !installed_packages.contains(package) {
+                to_install.push(package)
+            }
+        } else {
+            if installed_packages.contains(package) {
+                to_install_asdeps.push(package)
             }
         }
     }
+
+    if to_install.len() > 0 {
+        Command::new("paru")
+            .arg("-S")
+            .args(to_install)
+            .status()
+            .expect("Failed to install package.");
+    }
+
+    if to_install_asdeps.len() > 0 {
+        Command::new("paru")
+            .arg("-S")
+            .arg("--asdeps")
+            .args(to_install_asdeps)
+            .status()
+            .expect("Failed to install package.");
+    }
+
+    let mut to_remove = Vec::new();
+    if with_uninstall {
+        for package in installed_packages {
+            if !package_states.contains_key(&package) {
+                to_remove.push(package)
+            }
+        }
+
+        if to_remove.len() > 0 {
+            Command::new("paru")
+                .arg("-R")
+                .args(&to_remove)
+                .status()
+                .expect("Failed to uninstall package.");
+        }
+    }
+
     Ok(())
 }
 
