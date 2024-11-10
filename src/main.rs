@@ -2,7 +2,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::*;
 use dialoguer::{theme::ColorfulTheme, Input, Select};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -317,9 +317,10 @@ fn apply_changes(
     with_install: bool,
     with_uninstall: bool,
 ) -> io::Result<()> {
+    let installed_packages = get_installed_packages()?;
     if with_install {
         for (package, state) in package_states {
-            if state.explicit && !is_installed(package) {
+            if state.explicit && !installed_packages.contains(package) {
                 Command::new("paru")
                     .arg("-S")
                     .arg(package)
@@ -349,7 +350,17 @@ fn apply_changes(
     Ok(())
 }
 
-fn is_installed(package: &str) -> bool {
-    let status = Command::new("paru").arg("-Qi").arg(package).status();
-    status.map(|s| s.success()).unwrap_or(false)
+fn get_installed_packages() -> io::Result<HashSet<String>> {
+    let output = Command::new("paru")
+        .arg("-Qe")
+        .output()
+        .expect("Failed to execute paru -Qe.");
+    let output_str = String::from_utf8_lossy(&output.stdout);
+
+    let installed_packages: HashSet<String> = output_str
+        .lines()
+        .map(|line| line.split_whitespace().next().unwrap().to_string())
+        .collect();
+
+    Ok(installed_packages)
 }
