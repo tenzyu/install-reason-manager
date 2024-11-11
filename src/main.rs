@@ -35,8 +35,10 @@ enum Commands {
     },
     Managed,
     Unmanaged,
-    // Add other commands here
-    // Diff,
+    Diff {
+        #[arg(long)]
+        all: bool,
+    },
     // List,
     // Query,  // Note: this is a placeholder - subcommands for flags should be addressed.
     // Edit { package: String },
@@ -58,7 +60,7 @@ fn main() -> io::Result<()> {
         }) => commands::apply::run(&package_states, *with_install, *with_uninstall, *sync),
         Some(Commands::Managed) => commands::managed::run(&package_states),
         Some(Commands::Unmanaged) => commands::unmanaged::run(&package_states),
-        // Some(Commands::Diff) => commands::diff::run(&package_states),
+        Some(Commands::Diff { all }) => commands::diff::run(&package_states, *all),
         // Some(Commands::List) => commands::list::run(&package_states),
         // Some(Commands::Query) => commands::query::run(&package_states), // Placeholder.  You'll need to define this.
         // Some(Commands::Edit { package }) => {

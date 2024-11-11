@@ -25,6 +25,21 @@ pub fn get_installed_packages_vec() -> io::Result<Vec<String>> {
     Ok(installed_packages)
 }
 
+pub fn get_installed_packages_asdeps_hashset() -> io::Result<HashSet<String>> {
+    let output = Command::new("paru").arg("-Qdq").output()?; // Use pacman -Qeq to get explicitly installed packages
+
+    if !output.status.success() {
+        return Err(io::Error::new(io::ErrorKind::Other, "paru -Qdq failed"));
+    }
+
+    let packages: HashSet<String> = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(String::from)
+        .collect();
+
+    Ok(packages)
+}
+
 pub fn display_package_details(package_name: &str) -> io::Result<()> {
     let output = Command::new("paru").arg("-Qi").arg(package_name).output()?;
 
