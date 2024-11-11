@@ -39,7 +39,7 @@ enum Commands {
         #[arg(long)]
         all: bool,
     },
-    // List,
+    List,
     // Query,  // Note: this is a placeholder - subcommands for flags should be addressed.
     // Edit { package: String },
 }
@@ -61,7 +61,7 @@ fn main() -> io::Result<()> {
         Some(Commands::Managed) => commands::managed::run(&package_states),
         Some(Commands::Unmanaged) => commands::unmanaged::run(&package_states),
         Some(Commands::Diff { all }) => commands::diff::run(&package_states, *all),
-        // Some(Commands::List) => commands::list::run(&package_states),
+        Some(Commands::List) => commands::list::run(&package_states),
         // Some(Commands::Query) => commands::query::run(&package_states), // Placeholder.  You'll need to define this.
         // Some(Commands::Edit { package }) => {
         //     commands::edit::run(&mut package_states, &state_file_path, package)
