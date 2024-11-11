@@ -41,7 +41,9 @@ enum Commands {
     },
     List,
     // Query,  // Note: this is a placeholder - subcommands for flags should be addressed.
-    // Edit { package: String },
+    Edit {
+        package: String,
+    },
 }
 
 fn main() -> io::Result<()> {
@@ -63,9 +65,9 @@ fn main() -> io::Result<()> {
         Some(Commands::Diff { all }) => commands::diff::run(&package_states, *all),
         Some(Commands::List) => commands::list::run(&package_states),
         // Some(Commands::Query) => commands::query::run(&package_states), // Placeholder.  You'll need to define this.
-        // Some(Commands::Edit { package }) => {
-        //     commands::edit::run(&mut package_states, &state_file_path, package)
-        // }
+        Some(Commands::Edit { package }) => {
+            commands::edit::run(&mut package_states, &state_file_path, package)
+        }
         None => {
             println!("{}", Cli::command().render_long_help());
             Ok(())
