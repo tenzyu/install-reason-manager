@@ -38,8 +38,9 @@ fn get_custom_state_file_path(custom_path: &PathBuf) -> io::Result<PathBuf> {
 
     // Check if the extension is .json (or allow override)
     if custom_path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-        println!("The provided path does not have a .json extension. Are you sure you want to use this path? (y/n)");
-        let confirmed = utils::confirm_prompt_with_default(false)?;
+        println!("The provided path does not have a .json extension. ");
+        let confirmed =
+            utils::confirm_prompt("Are you sure you want to use this path? (y/n)", false)?;
         if !confirmed {
             return Err(io::Error::new(io::ErrorKind::Other, "Operation cancelled."));
         }

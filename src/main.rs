@@ -75,10 +75,5 @@ fn main() -> io::Result<()> {
         std::process::exit(1);
     }
 
-    if let Err(e) = moree_state_manager::save_package_states(&state_file_path, &package_states) {
-        eprintln!("Error saving state: {}", e);
-        std::process::exit(1);
-    }
-
     Ok(())
 }

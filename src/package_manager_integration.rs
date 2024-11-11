@@ -28,14 +28,19 @@ pub fn get_installed_packages_vec() -> io::Result<Vec<String>> {
 pub fn display_package_details(package_name: &str) -> io::Result<()> {
     let output = Command::new("paru").arg("-Qi").arg(package_name).output()?;
 
-    if !output.status.success() {
-        eprintln!(
-            "Error getting package details for {}: {}",
-            package_name,
-            String::from_utf8_lossy(&output.stderr)
-        ); // Print stderr for debugging
-        return Err(io::Error::new(io::ErrorKind::Other, "paru -Qi failed"));
+    if let Some(code) = output.status.code() {
+        // Correct: Removed extra parentheses
+        if code != 0 {
+            // Only print an error if the command wasn't successful
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            eprintln!(
+                "Error getting package details for {} (exit code {}): {}",
+                package_name, code, stderr
+            );
+            return Err(io::Error::new(io::ErrorKind::Other, "paru -Qi failed"));
+        }
     }
+    // If output.status.code() is None, or it's 0, continue as normal
 
     println!("{}", "\nPackage Details:".bold().yellow());
     println!("{}", String::from_utf8_lossy(&output.stdout));
@@ -44,36 +49,22 @@ pub fn display_package_details(package_name: &str) -> io::Result<()> {
 }
 
 pub fn install_packages(packages: &[String]) -> io::Result<()> {
-    let output = Command::new("paru").arg("-S").args(packages).status()?;
-
-    if !output.success() {
-        return Err(io::Error::new(io::ErrorKind::Other, "paru -S failed"));
-    }
-    Ok(())
+    run_paru_command("-S", packages)
 }
 
 pub fn install_packages_as_deps(packages: &[String]) -> io::Result<()> {
-    let output = Command::new("paru")
-        .arg("-S")
-        .arg("--asdeps")
-        .args(packages)
-        .status()?;
-
-    if !output.success() {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            "paru -S --asdeps failed",
-        ));
-    }
-    Ok(())
+    run_paru_command("--asdeps", packages)
 }
 
 pub fn remove_packages(packages: &[String]) -> io::Result<()> {
-    let output = Command::new("paru").arg("-R").args(packages).status()?;
+    run_paru_command("-R", packages)
+}
+
+fn run_paru_command(flag: &str, packages: &[String]) -> io::Result<()> {
+    let output = Command::new("paru").arg(flag).args(packages).status()?;
 
     if !output.success() {
-        return Err(io::Error::new(io::ErrorKind::Other, "paru -R failed"));
+        return Err(io::Error::new(io::ErrorKind::Other, "paru command failed"));
     }
-
     Ok(())
 }
