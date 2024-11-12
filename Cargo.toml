@@ -2,6 +2,10 @@
 name = "moree"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
+description = "A command-line tool for explicitly managing package installations reasons."
+repository = "https://github.com/tenzyu/moree"
+readme = "README.md"
 
 [dependencies]
 clap = { version = "4.5.20", features = ["derive"] }
