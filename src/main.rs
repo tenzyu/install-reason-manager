@@ -33,7 +33,6 @@ enum Commands {
         #[arg(long)]
         sync: bool,
     },
-    Managed,
     Unmanaged,
     Diff {
         #[arg(long)]
@@ -67,7 +66,6 @@ fn main() -> io::Result<()> {
             with_uninstall,
             sync,
         }) => commands::apply::run(&package_states, *with_install, *with_uninstall, *sync),
-        Some(Commands::Managed) => commands::managed::run(&package_states),
         Some(Commands::Unmanaged) => commands::unmanaged::run(&package_states),
         Some(Commands::Diff { all }) => commands::diff::run(&package_states, *all),
         Some(Commands::List) => commands::list::run(&package_states),
