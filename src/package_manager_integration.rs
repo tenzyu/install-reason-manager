@@ -4,29 +4,37 @@ use std::io;
 use std::process::Command;
 
 pub fn get_installed_packages_hashset() -> io::Result<HashSet<String>> {
-    let output = Command::new("paru").arg("-Qe").output()?;
+    let output = Command::new("paru").arg("-Qeq").output()?;
+
+    if !output.status.success() {
+        return Err(io::Error::new(io::ErrorKind::Other, "paru -Qeq failed"));
+    }
 
     let installed_packages: HashSet<String> = String::from_utf8_lossy(&output.stdout)
         .lines()
-        .filter_map(|line| line.split_whitespace().next().map(String::from))
+        .map(String::from)
         .collect();
 
     Ok(installed_packages)
 }
 
 pub fn get_installed_packages_vec() -> io::Result<Vec<String>> {
-    let output = Command::new("paru").arg("-Qe").output()?;
+    let output = Command::new("paru").arg("-Qeq").output()?;
+
+    if !output.status.success() {
+        return Err(io::Error::new(io::ErrorKind::Other, "paru -Qeq failed"));
+    }
 
     let installed_packages: Vec<String> = String::from_utf8_lossy(&output.stdout)
         .lines()
-        .filter_map(|line| line.split_whitespace().next().map(String::from))
+        .map(String::from)
         .collect();
 
     Ok(installed_packages)
 }
 
 pub fn get_installed_packages_asdeps_hashset() -> io::Result<HashSet<String>> {
-    let output = Command::new("paru").arg("-Qdq").output()?; // Use pacman -Qeq to get explicitly installed packages
+    let output = Command::new("paru").arg("-Qdq").output()?;
 
     if !output.status.success() {
         return Err(io::Error::new(io::ErrorKind::Other, "paru -Qdq failed"));
@@ -44,9 +52,7 @@ pub fn display_package_details(package_name: &str) -> io::Result<()> {
     let output = Command::new("paru").arg("-Qi").arg(package_name).output()?;
 
     if let Some(code) = output.status.code() {
-        // Correct: Removed extra parentheses
         if code != 0 {
-            // Only print an error if the command wasn't successful
             let stderr = String::from_utf8_lossy(&output.stderr);
             eprintln!(
                 "Error getting package details for {} (exit code {}): {}",
@@ -55,7 +61,6 @@ pub fn display_package_details(package_name: &str) -> io::Result<()> {
             return Err(io::Error::new(io::ErrorKind::Other, "paru -Qi failed"));
         }
     }
-    // If output.status.code() is None, or it's 0, continue as normal
 
     println!("{}", "\nPackage Details:".bold().yellow());
     println!("{}", String::from_utf8_lossy(&output.stdout));
